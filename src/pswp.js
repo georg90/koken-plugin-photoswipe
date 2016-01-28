@@ -142,7 +142,73 @@ var initPhotoSwipeFromDOM = function(options) {
 
 		// Pass data to PhotoSwipe and initialize it
 		gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
-
+		// Support Video Start https://github.com/dimsemenov/PhotoSwipe/issues/651
+		gallery.listen('afterChange', function() {
+            detectVideo(gallery);
+        });
+        
+        gallery.listen('beforeChange', function() {
+           removeVideo();
+        });
+       gallery.listen('resize', function() { 
+           if ($('.videoHolder').length > 0) updateVideoPosition(gallery);
+       });
+       gallery.listen('close', function() {
+           removeVideo();
+       });
+       
+       detectVideo(gallery);
+    };
+    
+    function removeVideo() {
+        if ($('.videoHolder').length > 0) { 
+            if ($('#video').length > 0) {
+                $('video')[0].pause();
+                $('video')[0].src = "";
+                $('.videoHolder').remove();
+                $('.pswp__img').css('visibility','visible');
+            } else {
+                $('.videoHolder').remove();
+            }
+        }
+    }
+    
+    function detectVideo(gallery) {
+        var src = gallery.currItem.src;
+        if (src.indexOf('video')>= 0) {
+            addVideo(gallery.currItem);
+            updateVideoPosition(gallery);
+        }
+    }
+    function addVideo(item, vp) {
+        var videofile = item.src.split(".");
+        var v = $('<div />', {
+                    class:'videoHolder',
+                    css : ({'position': 'absolute','width':item.w, 'height':item.h})
+        
+        });
+        v.one('click touchstart', (function() {
+            var playerCode = '<video id="video" width="'+item.w+'" height="'+item.h+'" autoplay controls>' +
+            '<source src="'+videofile[0]+'.mp4" type="video/mp4"></source>' +
+            '<source src="'+videofile[0]+'.webm" type="video/webm"></source>' +
+            '</video>';
+             $(this).html(playerCode);
+             $('.pswp__img').css('visibility','hidden');
+            
+        }));
+        v.appendTo('.pswp__scroll-wrap');
+    }
+    
+    function updateVideoPosition(o) {
+        var item = o.currItem;
+        var vp = o.viewportSize;
+        var top = (vp.y - item.h)/2;
+        var left = (vp.x - item.w)/2;
+        $('.videoHolder').css({position:'absolute',top:top, left:left});
+        
+    }
+    // End Support Video
+    
 		// create variable that will store real size of viewport
 		var realViewportWidth,
 			useImageSize = 'medium_large',
